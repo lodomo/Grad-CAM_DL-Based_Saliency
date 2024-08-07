@@ -1,0 +1,15 @@
+Image: gc1 | Prediction: collie | Confidence: 0.12582391500473022
+Image: gc1 | Prediction: basenji | Confidence: 0.09021800011396408
+Image: gc1 | Prediction: Airedale | Confidence: 0.07872290164232254
+Image: gc2 | Prediction: mushroom | Confidence: 0.9168239235877991
+Image: gc2 | Prediction: agaric | Confidence: 0.06971021741628647
+Image: gc2 | Prediction: bolete | Confidence: 0.005856357514858246
+Image: gc3 | Prediction: tow_truck | Confidence: 0.1390041559934616
+Image: gc3 | Prediction: trailer_truck | Confidence: 0.1304062306880951
+Image: gc3 | Prediction: racer | Confidence: 0.11487124115228653
+Image: gc4 | Prediction: jack-o'-lantern | Confidence: 0.4137215316295624
+Image: gc4 | Prediction: acorn_squash | Confidence: 0.2126518338918686
+Image: gc4 | Prediction: barrow | Confidence: 0.0895940363407135
+Image: gc5 | Prediction: airliner | Confidence: 0.9902443885803223
+Image: gc5 | Prediction: wing | Confidence: 0.009404432028532028
+Image: gc5 | Prediction: space_shuttle | Confidence: 0.00022108625853434205

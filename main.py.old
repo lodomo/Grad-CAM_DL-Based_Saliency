@@ -1,0 +1,137 @@
+###############################################################################
+#
+# Author: Lorenzo D. Moon
+# Professor: Anthony Rhodes
+# Course: CS-410 : Computer Vision & Deep Learning
+# Assignment: Programming Assignment 4
+# Description: Exercise #2: Grad-CAM DL-Based Saliency
+#
+###############################################################################
+
+import os
+import sys
+
+import numpy as np
+from keras import backend as K
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications.vgg16 import (decode_predictions,
+                                                 preprocess_input)
+from tensorflow.keras.preprocessing import image
+
+
+def main(argv):
+    if len(argv) < 2:
+        print("Usage: python main.py <image_directory> <output_directory>")
+        exit(1)
+    model = VGG16(weights="imagenet")
+
+    img_dir = argv[0]
+    out_dir = argv[1]
+    image_paths = set_paths(img_dir)
+    img_data = load_images(image_paths, model)
+
+    for img in img_data:
+        print(img)
+        img.scaled_map.save(os.path.join(out_dir, os.path.basename(img.path)))
+
+    exit(0)
+
+
+def set_paths(img_dir):
+    image_paths = []
+    for f in os.listdir(img_dir):
+        if f.endswith(".jpg"):
+            image_paths.append(os.path.join(img_dir, f))
+    return image_paths
+
+
+def load_images(image_paths, model):
+    images = []
+    for path in image_paths:
+        imgdata = ImageData(path, model)
+        images.append(imgdata)
+    images.sort()
+    return images
+
+
+class ImageData:
+    def __init__(self, path, model):
+        self.path = path
+        self.original = image.load_img(path)
+        self.size = self.original.size
+        self.img = self.gen_img_array(path)
+        self.prediction = model.predict(self.img)
+        last_layer = model.get_layer("block5_conv3")
+        self.last_layer_output = last_layer.output
+        ix = np.argmax(self.prediction)
+        self.gradient = K.GradientTape(model.output[:, ix], self.last_layer_output)[0]
+        self.y_c = self.prediction[0, ix]
+        self.ack = self.gradient_weights()
+        self.lc_grad_cam = self.calculate_grad_cam()
+        self.scaled_map = self.scale_map()
+
+    def __gt__(self, other):
+        return self.path > other.path
+
+    def __lt__(self, other):
+        return self.path < other.path
+
+    def __eq__(self, other):
+        return self.path == other.path
+
+    def __ne__(self, other):
+        return self.path != other.path
+
+    def __ge__(self, other):
+        return not self < other
+
+    def __le__(self, other):
+        return not self > other
+
+    def gen_img_array(self, path):
+        self.img_array = image.load_img(path, target_size=(224, 224))
+        self.img_array = image.img_to_array(self.img_array)
+        self.img_array = np.expand_dims(self.img_array, axis=0)
+        self.img_array = preprocess_input(self.img_array)
+        return self.img_array
+
+    def __str__(self):
+        string = f"Path: {self.path}\n"
+        string += f"Image: {self.original}\n"
+        string += f"Size: {self.size}\n"
+        string += f"Prediction: {decode_predictions(self.prediction, top=3)[0]}\n"
+        string += f"Gradient: {self.gradient}\n"
+        string += f"Y_c: {self.y_c}\n"
+        string += f"LC Grad-CAM: {self.lc_grad_cam}\n"
+        string += f"Scaled Map: {self.scaled_map}\n"
+        return string
+
+    def gradient_weights(self):
+        ack = []
+        for i in range(512):
+            weights = K.mean(self.gradient[:, :, :, i])
+            ack.append(weights)
+        return ack
+
+    def calculate_grad_cam(self):
+        ack = self.ack
+        last_layer_output = self.last_layer_output
+        sums = K.sum(
+            [ack[i] * last_layer_output[:, :, :, i] for i in range(512)], axis=0
+        )
+        lc_grad_cam = K.relu(sums)
+        return lc_grad_cam
+
+    def scale_map(self):
+        map = np.squeeze(self.lc_grad_cam)
+        # Normalize the heatmap 0,255
+        map = (map - np.min(map)) / (map.max() - map.min())
+        map = np.uint8(255 * map)
+        # scale the heatmap to the size of the original image
+        map = image.array_to_img(map)
+        map = map.resize((self.size[0], self.size[1]))
+        return map
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
